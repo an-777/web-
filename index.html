@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cookie Test</title>
+</head>
+<body>
+    <h1>Cookie 測試</h1>
+    <button onclick="setCookie()">設置 Cookie</button>
+    <button onclick="checkCookie()">檢查 Cookie</button>
+    <button onclick="deleteCookie()">刪除 Cookie</button>
+
+    <p id="status"></p>
+
+    <script>
+        // 設置無限期的 Cookie (10年)
+        function setCookie() {
+            let d = new Date();
+            d.setTime(d.getTime() + (10 * 365 * 24 * 60 * 60 * 1000)); // 設置 10 年後過期
+            let expires = "expires=" + d.toUTCString();
+            document.cookie = "testCookie=Hello; " + expires + "; path=/";
+            document.getElementById('status').innerHTML = "Cookie 已設置，10 年後過期";
+        }
+
+        // 檢查 Cookie
+        function checkCookie() {
+            let cookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('testCookie='));
+            if (cookie) {
+                document.getElementById('status').innerHTML = "Cookie 存在: " + cookie;
+            } else {
+                document.getElementById('status').innerHTML = "Cookie 已刪除或不存在";
+            }
+        }
+
+        // 刪除 Cookie
+        function deleteCookie() {
+            document.cookie = "testCookie=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            document.getElementById('status').innerHTML = "Cookie 已刪除";
+        }
+    </script>
+</body>
+</html>
