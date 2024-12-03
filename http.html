@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Request and Response Viewer</title>
+</head>
+<body>
+    <h1>HTTP Request and Response Viewer</h1>
+    
+    <button id="sendRequest">Send HTTP Request</button>
+    
+    <h2>Request:</h2>
+    <pre id="requestOutput"></pre>
+    
+    <h2>Response:</h2>
+    <pre id="responseOutput"></pre>
+    
+    <script>
+        document.getElementById("sendRequest").addEventListener("click", async () => {
+            const url = "https://jsonplaceholder.typicode.com/posts";
+            
+            // 建立請求內容
+            const requestData = {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    title: "Sample Title",
+                    body: "Sample Body",
+                    userId: 1
+                })
+            };
+            
+            // 顯示請求內容
+            document.getElementById("requestOutput").textContent = JSON.stringify(requestData, null, 2);
+            
+            // 發送請求並顯示回應
+            try {
+                const response = await fetch(url, requestData);
+                const responseData = await response.json();
+                document.getElementById("responseOutput").textContent = JSON.stringify(responseData, null, 2);
+            } catch (error) {
+                document.getElementById("responseOutput").textContent = "Error: " + error.message;
+            }
+        });
+    </script>
+</body>
+</html>
