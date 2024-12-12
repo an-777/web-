@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文字替換工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        textarea, input, button {
+            margin: 10px 0;
+            padding: 10px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>文字替換工具</h1>
+    <textarea id="originalText" rows="8" placeholder="請輸入文字..."></textarea>
+    <input type="text" id="findText" placeholder="請輸入要尋找的文字">
+    <input type="text" id="replaceText" placeholder="請輸入替換文字">
+    <button id="replaceButton">執行替換</button>
+    <h2>結果</h2>
+    <textarea id="resultText" rows="8" readonly></textarea>
+
+    <script>
+        document.getElementById('replaceButton').addEventListener('click', function() {
+            const originalText = document.getElementById('originalText').value;
+            const findText = document.getElementById('findText').value;
+            const replaceText = document.getElementById('replaceText').value;
+
+            if (!findText) {
+                alert('請輸入要尋找的文字！');
+                return;
+            }
+
+            // 替換文字（全域替換）
+            const result = originalText.split(findText).join(replaceText);
+            document.getElementById('resultText').value = result;
+        });
+    </script>
+</body>
+</html>
