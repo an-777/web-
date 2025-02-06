@@ -74,19 +74,19 @@
 </div>
 
 <script>
-    function replaceText() {
-        let inputText = document.getElementById("inputText").value;
-        let regexPattern = document.getElementById("regexPattern").value;
-        let replacement = document.getElementById("replacement").value;
+function replaceText() {
+    let inputText = document.getElementById("inputText").value;
+    let regexPattern = document.getElementById("regexPattern").value;
+    let replacement = document.getElementById("replacement").value;
 
-        try {
-            let regex = new RegExp(regexPattern, "g"); // 全域取代
-            let result = inputText.replace(regex, replacement);
-            document.getElementById("outputText").textContent = result;
-        } catch (error) {
-            alert("正規表示式錯誤：" + error.message);
-        }
+    try {
+        let regex = new RegExp(regexPattern, "g"); // 全域取代
+        let result = inputText.replace(regex, replacement);
+        document.getElementById("outputText").textContent = result;
+    } catch (error) {
+        alert("正規表示式錯誤：" + error.message);
     }
+}
 </script>
 
 </body>
