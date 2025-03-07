@@ -36,23 +36,26 @@
             reader.readAsText(file, 'UTF-8');
         });
 
-        function fetchGitHubFile() {
-            const url = document.getElementById('githubUrl').value.trim();
-            if (!url) {
-                alert("請輸入 GitHub 檔案的 Raw URL！");
-                return;
-            }
+function fetchGitHubFile() {
+    let url = document.getElementById('githubUrl').value.trim();
+    if (!url) {
+        alert("請輸入 GitHub 檔案的 URL！");
+        return;
+    }
 
-            fetch(url)
-                .then(response => {
-                    if (!response.ok) throw new Error("下載失敗，請確認 URL 是否正確");
-                    return response.text();
-                })
-                .then(content => checkPoFile(content))
-                .catch(error => {
-                    document.getElementById('output').innerHTML = `<div class="error">${error.message}</div>`;
-                });
-        }
+    // 嘗試將普通 GitHub 連結轉換成 Raw 連結
+    url = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/");
+
+    fetch(url)
+        .then(response => {
+            if (!response.ok) throw new Error("下載失敗，請確認 URL 是否正確");
+            return response.text();
+        })
+        .then(content => checkPoFile(content))
+        .catch(error => {
+            document.getElementById('output').innerHTML = `<div class="error">${error.message}</div>`;
+        });
+}
 
         function checkPoFile(content) {
             const lines = content.split('\n');
