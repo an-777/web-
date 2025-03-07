@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PO 檔行長度檢查</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .result { white-space: pre-wrap; margin-top: 20px; }
+        .error { color: red; font-weight: bold; }
+        .success { color: green; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h2>PO 檔行長度檢查</h2>
+
+    <label for="githubUrl">輸入 GitHub 檔案 Raw 連結：</label>
+    <input type="text" id="githubUrl" placeholder="https://raw.githubusercontent.com/..." style="width: 80%;">
+    <button onclick="fetchGitHubFile()">下載並檢查</button>
+
+    <p>或上傳本機 `.po` 檔案：</p>
+    <input type="file" id="fileInput" accept=".po">
+
+    <div id="output" class="result"></div>
+
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                checkPoFile(text);
+            };
+            reader.readAsText(file, 'UTF-8');
+        });
+
+        function fetchGitHubFile() {
+            const url = document.getElementById('githubUrl').value.trim();
+            if (!url) {
+                alert("請輸入 GitHub 檔案的 Raw URL！");
+                return;
+            }
+
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) throw new Error("下載失敗，請確認 URL 是否正確");
+                    return response.text();
+                })
+                .then(content => checkPoFile(content))
+                .catch(error => {
+                    document.getElementById('output').innerHTML = `<div class="error">${error.message}</div>`;
+                });
+        }
+
+        function checkPoFile(content) {
+            const lines = content.split('\n');
+            let output = '';
+            let hasError = false;
+
+            lines.forEach((line, index) => {
+                if (line.length > 79) {
+                    output += `<div class="error">第 ${index + 1} 行超過 79 字元 (${line.length})</div>\n`;
+                    hasError = true;
+                }
+            });
+
+            document.getElementById('output').innerHTML = hasError ? output : '<div class="success">檢查通過，沒有行超過 79 字元。</div>';
+        }
+    </script>
+</body>
+</html>
