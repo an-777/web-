@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <title>翻譯段落比對</title>
+  <title>翻譯段落比對工具</title>
   <style>
     body {
       display: flex;
@@ -22,6 +22,14 @@
     .paragraph {
       margin-bottom: 16px;
       white-space: pre-wrap;
+      transition: background-color 0.2s ease;
+    }
+    .paragraph:hover {
+      background-color: #f0f8ff;
+      cursor: pointer;
+    }
+    .highlight {
+      background-color: #ffeeba;
     }
   </style>
 </head>
@@ -31,25 +39,59 @@
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
-    async function loadAndRenderMarkdown(url, containerId) {
+    async function loadAndRenderMarkdown(url, containerId, storageArray) {
       const res = await fetch(url);
       const text = await res.text();
 
       const paragraphs = text.split(/\n\s*\n/); // 以空行分段
       const container = document.getElementById(containerId);
-      container.innerHTML = ""; // 清空
+      container.innerHTML = "";
 
-      paragraphs.forEach(paragraph => {
+      paragraphs.forEach((paragraph, index) => {
         const div = document.createElement('div');
         div.className = 'paragraph';
-        div.innerHTML = marked.parse(paragraph);
+        div.innerHTML = marked.parse(paragraph.trim());
+        div.dataset.index = index;
+        storageArray.push(div);
         container.appendChild(div);
       });
     }
 
-    // 這裡請根據你的 GitHub Pages 網址調整路徑
-    loadAndRenderMarkdown('1.md', 'original');
-    loadAndRenderMarkdown('2.md', 'translated');
+    const originalParagraphs = [];
+    const translatedParagraphs = [];
+
+    // 載入內容
+    Promise.all([
+      loadAndRenderMarkdown('docs/original.md', 'original', originalParagraphs),
+      loadAndRenderMarkdown('docs/translated.md', 'translated', translatedParagraphs)
+    ]).then(() => {
+      // 加入事件綁定
+      const total = Math.min(originalParagraphs.length, translatedParagraphs.length);
+
+      for (let i = 0; i < total; i++) {
+        const orig = originalParagraphs[i];
+        const trans = translatedParagraphs[i];
+
+        function highlightPair() {
+          removeHighlights();
+          orig.classList.add('highlight');
+          trans.classList.add('highlight');
+        }
+
+        function removeHighlights() {
+          document.querySelectorAll('.highlight').forEach(el => el.classList.remove('highlight'));
+        }
+
+        orig.addEventListener('mouseenter', highlightPair);
+        trans.addEventListener('mouseenter', highlightPair);
+
+        orig.addEventListener('mouseleave', removeHighlights);
+        trans.addEventListener('mouseleave', removeHighlights);
+
+        orig.addEventListener('click', highlightPair);
+        trans.addEventListener('click', highlightPair);
+      }
+    });
   </script>
 </body>
 </html>
