@@ -48,8 +48,9 @@
             background-color: #e6f3ff;
             border-left: 3px solid #007bff;
         }
-        input[type="file"] {
-            margin-bottom: 15px;
+        .error {
+            color: red;
+            font-weight: bold;
         }
         /* 基本的 Markdown 樣式 */
         .paragraph h1, .paragraph h2, .paragraph h3 {
@@ -83,40 +84,38 @@
     <div class="container">
         <div class="file-section" id="file1-section">
             <h2>1.md</h2>
-            <input type="file" id="file1-input" accept=".md">
             <div id="file1-content"></div>
         </div>
         <div class="file-section" id="file2-section">
             <h2>2.md</h2>
-            <input type="file" id="file2-input" accept=".md">
             <div id="file2-content"></div>
         </div>
     </div>
 
     <script>
-        // 處理檔案上傳並顯示內容
-        function handleFile(input, contentDiv) {
-            const file = input.files[0];
-            if (!file) return;
+        // 載入並顯示檔案內容
+        function loadFile(fileName, contentDiv) {
+            fetch(fileName)
+                .then(response => {
+                    if (!response.ok) throw new Error(`無法載入 ${fileName}`);
+                    return response.text();
+                })
+                .then(text => {
+                    const paragraphs = text.split('\n\n').filter(p => p.trim() !== '');
+                    contentDiv.innerHTML = ''; // 清空舊內容
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const text = e.target.result;
-                // 以兩個換行符號分割段落
-                const paragraphs = text.split('\n\n').filter(p => p.trim() !== '');
-                contentDiv.innerHTML = ''; // 清空舊內容
-
-                paragraphs.forEach((para, index) => {
-                    const p = document.createElement('div');
-                    p.className = 'paragraph';
-                    // 使用 marked.js 解析 Markdown
-                    p.innerHTML = marked.parse(para.trim());
-                    p.dataset.index = index; // 用於同步高亮
-                    p.addEventListener('click', () => highlightParagraph(p, contentDiv));
-                    contentDiv.appendChild(p);
+                    paragraphs.forEach((para, index) => {
+                        const p = document.createElement('div');
+                        p.className = 'paragraph';
+                        p.innerHTML = marked.parse(para.trim()); // 解析 Markdown
+                        p.dataset.index = index; // 用於同步高亮
+                        p.addEventListener('click', () => highlightParagraph(p, contentDiv));
+                        contentDiv.appendChild(p);
+                    });
+                })
+                .catch(error => {
+                    contentDiv.innerHTML = `<p class="error">${error.message}</p>`;
                 });
-            };
-            reader.readAsText(file);
         }
 
         // 高亮選中的段落並同步另一側
@@ -139,14 +138,9 @@
             selected.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
-        // 綁定檔案輸入事件
-        document.getElementById('file1-input').addEventListener('change', () => {
-            handleFile(document.getElementById('file1-input'), document.getElementById('file1-content'));
-        });
-
-        document.getElementById('file2-input').addEventListener('change', () => {
-            handleFile(document.getElementById('file2-input'), document.getElementById('file2-content'));
-        });
+        // 自動載入檔案
+        loadFile('./1.md', document.getElementById('file1-content'));
+        loadFile('./2.md', document.getElementById('file2-content'));
     </script>
 </body>
 </html>
