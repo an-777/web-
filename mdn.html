@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <title>翻譯段落比對</title>
+  <style>
+    body {
+      display: flex;
+      margin: 0;
+      font-family: sans-serif;
+    }
+    .column {
+      flex: 1;
+      padding: 20px;
+      overflow-y: scroll;
+      height: 100vh;
+      border-right: 1px solid #ccc;
+    }
+    .column:last-child {
+      border-right: none;
+    }
+    .paragraph {
+      margin-bottom: 16px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="column" id="original"></div>
+  <div class="column" id="translated"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    async function loadAndRenderMarkdown(url, containerId) {
+      const res = await fetch(url);
+      const text = await res.text();
+
+      const paragraphs = text.split(/\n\s*\n/); // 以空行分段
+      const container = document.getElementById(containerId);
+      container.innerHTML = ""; // 清空
+
+      paragraphs.forEach(paragraph => {
+        const div = document.createElement('div');
+        div.className = 'paragraph';
+        div.innerHTML = marked.parse(paragraph);
+        container.appendChild(div);
+      });
+    }
+
+    // 這裡請根據你的 GitHub Pages 網址調整路徑
+    loadAndRenderMarkdown('1.md', 'original');
+    loadAndRenderMarkdown('2.md', 'translated');
+  </script>
+</body>
+</html>
