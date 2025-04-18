@@ -1,0 +1,108 @@
+body {
+    font-family: sans-serif;
+    line-height: 1.6;
+    margin: 20px;
+}
+
+h1, h2 {
+    text-align: center;
+    color: #333;
+}
+
+.input-container {
+    display: flex;
+    gap: 20px; /* 輸入框間距 */
+    margin-bottom: 20px;
+}
+
+.input-area {
+    flex: 1; /* 讓兩個輸入框平分寬度 */
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box; /* 讓 padding 不影響寬度計算 */
+    font-size: 1rem;
+}
+
+#compareBtn {
+    display: block;
+    margin: 20px auto;
+    padding: 10px 20px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
+
+#compareBtn:hover {
+    background-color: #0056b3;
+}
+
+.comparison-container {
+    display: flex;
+    gap: 20px; /* 左右欄位間距 */
+    margin-top: 30px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+}
+
+.column {
+    flex: 1; /* 讓兩個顯示欄位平分寬度 */
+    border: 1px solid #e0e0e0;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    /* 如果段落高度差異大，可以考慮加上滾動條 */
+    /* max-height: 60vh; */
+    /* overflow-y: auto; */
+}
+
+.paragraph {
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px dashed transparent; /* 預留邊框空間 */
+    transition: background-color 0.3s, border-color 0.3s;
+    cursor: default; /* 或 pointer 如果想提示可點擊 */
+    white-space: pre-wrap; /* 保留段落內的換行符 */
+    min-height: 2em; /* 確保即使空段落也有一定高度 */
+    position: relative; /* 為了可能的段落編號 */
+    counter-increment: paragraph-counter; /* CSS 計數器 */
+}
+
+/* 互動高亮樣式 */
+.paragraph.highlighted {
+    background-color: #e6f7ff; /* 淡藍色背景 */
+    border-color: #91d5ff; /* 藍色虛線邊框 */
+}
+
+/* 可以選擇性加入段落編號 */
+.paragraph::before {
+    content: counter(paragraph-counter);
+    position: absolute;
+    left: -25px; /* 調整編號位置 */
+    top: 5px;
+    font-size: 0.8em;
+    color: #aaa;
+    font-weight: bold;
+}
+
+/* 重置左右欄的計數器 */
+.original-column {
+    counter-reset: paragraph-counter;
+}
+.translated-column {
+    counter-reset: paragraph-counter;
+}
