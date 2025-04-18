@@ -62,8 +62,8 @@
 
     // 載入內容
     Promise.all([
-      loadAndRenderMarkdown('docs/original.md', 'original', originalParagraphs),
-      loadAndRenderMarkdown('docs/translated.md', 'translated', translatedParagraphs)
+      loadAndRenderMarkdown('1.md', 'original', originalParagraphs),
+      loadAndRenderMarkdown('2.md', 'translated', translatedParagraphs)
     ]).then(() => {
       // 加入事件綁定
       const total = Math.min(originalParagraphs.length, translatedParagraphs.length);
