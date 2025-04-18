@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>比較 Markdown 檔案</title>
+    <!-- 引入 marked.js 來解析 Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .file-section {
+            width: 48%;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .file-section h2 {
+            margin-top: 0;
+            color: #444;
+        }
+        .paragraph {
+            padding: 10px;
+            margin: 5px 0;
+            border-left: 3px solid transparent;
+            transition: background-color 0.3s, border-color 0.3s;
+            cursor: pointer;
+            word-wrap: break-word;
+        }
+        .paragraph:hover {
+            background-color: #f0f0f0;
+        }
+        .highlight {
+            background-color: #e6f3ff;
+            border-left: 3px solid #007bff;
+        }
+        input[type="file"] {
+            margin-bottom: 15px;
+        }
+        /* 基本的 Markdown 樣式 */
+        .paragraph h1, .paragraph h2, .paragraph h3 {
+            margin: 0.5em 0;
+        }
+        .paragraph p {
+            margin: 0.5em 0;
+        }
+        .paragraph ul, .paragraph ol {
+            padding-left: 20px;
+        }
+        .paragraph code {
+            background-color: #f4f4f4;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .file-section {
+                width: 100%;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>比較 Markdown 檔案</h1>
+    <div class="container">
+        <div class="file-section" id="file1-section">
+            <h2>1.md</h2>
+            <input type="file" id="file1-input" accept=".md">
+            <div id="file1-content"></div>
+        </div>
+        <div class="file-section" id="file2-section">
+            <h2>2.md</h2>
+            <input type="file" id="file2-input" accept=".md">
+            <div id="file2-content"></div>
+        </div>
+    </div>
+
+    <script>
+        // 處理檔案上傳並顯示內容
+        function handleFile(input, contentDiv) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                // 以兩個換行符號分割段落
+                const paragraphs = text.split('\n\n').filter(p => p.trim() !== '');
+                contentDiv.innerHTML = ''; // 清空舊內容
+
+                paragraphs.forEach((para, index) => {
+                    const p = document.createElement('div');
+                    p.className = 'paragraph';
+                    // 使用 marked.js 解析 Markdown
+                    p.innerHTML = marked.parse(para.trim());
+                    p.dataset.index = index; // 用於同步高亮
+                    p.addEventListener('click', () => highlightParagraph(p, contentDiv));
+                    contentDiv.appendChild(p);
+                });
+            };
+            reader.readAsText(file);
+        }
+
+        // 高亮選中的段落並同步另一側
+        function highlightParagraph(selected, contentDiv) {
+            // 移除所有高亮
+            document.querySelectorAll('.paragraph').forEach(p => p.classList.remove('highlight'));
+            
+            // 高亮當前段落
+            selected.classList.add('highlight');
+
+            // 同步高亮另一側的相同索引段落
+            const otherContentDiv = contentDiv.id === 'file1-content' ? 'file2-content' : 'file1-content';
+            const otherPara = document.querySelector(`#${otherContentDiv} .paragraph[data-index="${selected.dataset.index}"]`);
+            if (otherPara) {
+                otherPara.classList.add('highlight');
+                otherPara.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            // 滾動到當前段落
+            selected.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // 綁定檔案輸入事件
+        document.getElementById('file1-input').addEventListener('change', () => {
+            handleFile(document.getElementById('file1-input'), document.getElementById('file1-content'));
+        });
+
+        document.getElementById('file2-input').addEventListener('change', () => {
+            handleFile(document.getElementById('file2-input'), document.getElementById('file2-content'));
+        });
+    </script>
+</body>
+</html>
