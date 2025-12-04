@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自動開關連結工具</title>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        h2 { color: #333; }
+        
+        /* 輸入框樣式 */
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            box-sizing: border-box; /* 確保 padding 不會撐開寬度 */
+        }
+
+        /* 按鈕區域 */
+        .controls { margin-bottom: 20px; }
+        button {
+            padding: 10px 25px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        /* 紀錄區塊 */
+        .log { 
+            padding: 15px; 
+            background: #f8f9fa; 
+            border: 1px solid #ddd; 
+            height: 200px; 
+            overflow-y: auto; /* 內容太多時出現卷軸 */
+            font-family: monospace;
+        }
+        .item { margin-bottom: 5px; border-bottom: 1px dashed #eee; padding-bottom: 2px; }
+        .success { color: green; }
+        .error { color: red; font-weight: bold; }
+        .info { color: #555; }
+    </style>
+</head>
+<body>
+
+    <h2>自動網址開啟器 (3秒後自動關閉)</h2>
+    
+    <p>請在下方輸入網址 (一行一個)，例如：<br>
+    <small style="color:gray">google.com<br>https://yahoo.com.tw</small></p>
+
+    <textarea id="urlInput" placeholder="請在此貼上網址，每一行代表一個新的連結...">https://www.google.com
+https://www.wikipedia.org
+bing.com</textarea>
+
+    <div class="controls">
+        <button id="btnStart" onclick="startProcess()">🚀 開始執行</button>
+        <span id="statusText" style="margin-left: 10px; font-weight: bold; color: #d9534f;"></span>
+    </div>
+
+    <h3>執行紀錄：</h3>
+    <div id="logArea" class="log">準備就緒...</div>
+
+    <script>
+        const logArea = document.getElementById('logArea');
+        const btnStart = document.getElementById('btnStart');
+        const statusText = document.getElementById('statusText');
+
+        function log(message, type = 'item') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logArea.appendChild(div);
+            logArea.scrollTop = logArea.scrollHeight; // 自動捲動到底部
+        }
+
+        async function startProcess() {
+            // 1. 取得使用者輸入並處理格式
+            const rawText = document.getElementById('urlInput').value;
+            // 根據換行符號分割，並過濾掉空白行
+            let urls = rawText.split('\n').map(u => u.trim()).filter(u => u.length > 0);
+
+            if (urls.length === 0) {
+                alert("請先輸入網址！");
+                return;
+            }
+
+            // 鎖定按鈕避免重複點擊
+            btnStart.disabled = true;
+            logArea.innerHTML = ""; // 清空紀錄
+            log("開始處理佇列...", "info");
+
+            for (let i = 0; i < urls.length; i++) {
+                let url = urls[i];
+
+                // 2. 簡單檢查網址格式，如果沒有 http 開頭自動補上
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    url = 'https://' + url;
+                }
+
+                statusText.innerText = `正在執行 (${i + 1}/${urls.length})`;
+                log(`準備開啟: ${url}`, "info");
+
+                // 3. 開啟視窗
+                const newWin = window.open(url, '_blank', 'width=1024,height=768');
+
+                if (!newWin) {
+                    log(`❌ 視窗被瀏覽器攔截！請允許此網站的彈出視窗權限。`, "error");
+                    statusText.innerText = "被攔截";
+                    btnStart.disabled = false;
+                    return; // 停止執行
+                }
+
+                // 4. 等待 3 秒
+                await new Promise(resolve => setTimeout(resolve, 3000));
+
+                // 5. 關閉視窗
+                if (!newWin.closed) {
+                    newWin.close();
+                    log(`✅ 已自動關閉`, "success");
+                } else {
+                    log(`⚠️ 使用者已手動關閉`, "info");
+                }
+
+                // (選用) 每個循環中間緩衝 1 秒
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            statusText.innerText = "全部完成";
+            log("<strong>所有任務已執行完畢。</strong>", "info");
+            btnStart.disabled = false;
+        }
+    </script>
+</body>
+</html>
