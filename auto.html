@@ -3,66 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>自動開關連結工具</title>
+    <title>課程自動點名助手</title>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
-        h2 { color: #333; }
-        
-        /* 輸入框樣式 */
-        textarea {
-            width: 100%;
-            height: 150px;
-            padding: 10px;
-            font-size: 14px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            margin-bottom: 10px;
-            box-sizing: border-box; /* 確保 padding 不會撐開寬度 */
+        input[type="text"], input[type="number"] {
+            width: 100%; padding: 10px; margin-bottom: 10px; font-size: 14px;
+            border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;
         }
-
-        /* 按鈕區域 */
-        .controls { margin-bottom: 20px; }
+        .controls { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; }
         button {
-            padding: 10px 25px;
-            font-size: 16px;
-            cursor: pointer;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
+            padding: 10px 25px; font-size: 16px; cursor: pointer;
+            background-color: #28a745; color: white; border: none; border-radius: 5px;
         }
-        button:hover { background-color: #0056b3; }
+        button:hover { background-color: #218838; }
         button:disabled { background-color: #ccc; cursor: not-allowed; }
-
-        /* 紀錄區塊 */
-        .log { 
-            padding: 15px; 
-            background: #f8f9fa; 
-            border: 1px solid #ddd; 
-            height: 200px; 
-            overflow-y: auto; /* 內容太多時出現卷軸 */
-            font-family: monospace;
-        }
-        .item { margin-bottom: 5px; border-bottom: 1px dashed #eee; padding-bottom: 2px; }
-        .success { color: green; }
-        .error { color: red; font-weight: bold; }
-        .info { color: #555; }
+        button#btnStop { background-color: #dc3545; }
+        button#btnStop:hover { background-color: #c82333; }
+        
+        .log { padding: 15px; background: #f8f9fa; border: 1px solid #ddd; height: 300px; overflow-y: auto; font-family: monospace; }
+        .item { margin-bottom: 5px; border-bottom: 1px dashed #eee; }
+        .highlight { color: #0056b3; font-weight: bold; }
+        .warn { color: #856404; background-color: #fff3cd; padding: 2px; }
     </style>
 </head>
 <body>
 
-    <h2>自動網址開啟器 (3秒後自動關閉)</h2>
-    
-    <p>請在下方輸入網址 (一行一個)，例如：<br>
-    <small style="color:gray">google.com<br>https://yahoo.com.tw</small></p>
+    <h2>NCU 自動點名連結產生器</h2>
+    <div class="warn">
+        ⚠️ <strong>限制說明：</strong> 基於瀏覽器安全政策，本工具<b>無法偵測</b>網頁是否顯示「點名成功」。<br>
+        它會依照設定次數自動遞增 ID 並開啟連結。請自行留意結果。
+    </div>
+    <br>
 
-    <textarea id="urlInput" placeholder="請在此貼上網址，每一行代表一個新的連結...">https://www.google.com
-https://www.wikipedia.org
-bing.com</textarea>
+    <label>原始連結 (包含舊的 date 與 timeTableId)：</label>
+    <input type="text" id="urlInput" value="https://ncueeclass.ncu.edu.tw/course/joinOnSite?courseId=35214&date=2025-09-25&timeTableType=2&timeTableId=12501&week=0&classTimeId=0">
+
+    <div style="display: flex; gap: 20px;">
+        <div style="flex: 1;">
+            <label>嘗試次數 (掃描範圍)：</label>
+            <input type="number" id="retryCount" value="20">
+        </div>
+        <div style="flex: 1;">
+            <label>每個視窗停留秒數：</label>
+            <input type="number" id="waitSec" value="3">
+        </div>
+    </div>
 
     <div class="controls">
-        <button id="btnStart" onclick="startProcess()">🚀 開始執行</button>
-        <span id="statusText" style="margin-left: 10px; font-weight: bold; color: #d9534f;"></span>
+        <button id="btnStart" onclick="startProcess()">🚀 開始掃描</button>
+        <button id="btnStop" onclick="stopProcess()" disabled>⛔ 停止</button>
+        <span id="statusText" style="font-weight: bold; color: #d9534f;"></span>
     </div>
 
     <h3>執行紀錄：</h3>
@@ -71,71 +61,106 @@ bing.com</textarea>
     <script>
         const logArea = document.getElementById('logArea');
         const btnStart = document.getElementById('btnStart');
+        const btnStop = document.getElementById('btnStop');
         const statusText = document.getElementById('statusText');
+        
+        let isRunning = false;
 
-        function log(message, type = 'item') {
+        function log(message) {
             const div = document.createElement('div');
-            div.className = type;
+            div.className = 'item';
             div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
             logArea.appendChild(div);
-            logArea.scrollTop = logArea.scrollHeight; // 自動捲動到底部
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        // 取得今天的日期格式 YYYY-MM-DD
+        function getTodayDateString() {
+            const d = new Date();
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function stopProcess() {
+            isRunning = false;
+            log("🛑 使用者已手動停止");
+            btnStart.disabled = false;
+            btnStop.disabled = true;
+            statusText.innerText = "已停止";
         }
 
         async function startProcess() {
-            // 1. 取得使用者輸入並處理格式
-            const rawText = document.getElementById('urlInput').value;
-            // 根據換行符號分割，並過濾掉空白行
-            let urls = rawText.split('\n').map(u => u.trim()).filter(u => u.length > 0);
+            const rawUrl = document.getElementById('urlInput').value.trim();
+            const maxRetries = parseInt(document.getElementById('retryCount').value, 10);
+            const waitTime = parseInt(document.getElementById('waitSec').value, 10) * 1000;
 
-            if (urls.length === 0) {
-                alert("請先輸入網址！");
+            if (!rawUrl) { alert("請輸入網址"); return; }
+
+            // 1. 解析網址並修改參數
+            let urlObj;
+            try {
+                urlObj = new URL(rawUrl);
+            } catch (e) {
+                alert("網址格式錯誤");
                 return;
             }
 
-            // 鎖定按鈕避免重複點擊
-            btnStart.disabled = true;
-            logArea.innerHTML = ""; // 清空紀錄
-            log("開始處理佇列...", "info");
-
-            for (let i = 0; i < urls.length; i++) {
-                let url = urls[i];
-
-                // 2. 簡單檢查網址格式，如果沒有 http 開頭自動補上
-                if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                    url = 'https://' + url;
-                }
-
-                statusText.innerText = `正在執行 (${i + 1}/${urls.length})`;
-                log(`準備開啟: ${url}`, "info");
-
-                // 3. 開啟視窗
-                const newWin = window.open(url, '_blank', 'width=1024,height=768');
-
-                if (!newWin) {
-                    log(`❌ 視窗被瀏覽器攔截！請允許此網站的彈出視窗權限。`, "error");
-                    statusText.innerText = "被攔截";
-                    btnStart.disabled = false;
-                    return; // 停止執行
-                }
-
-                // 4. 等待 3 秒
-                await new Promise(resolve => setTimeout(resolve, 3000));
-
-                // 5. 關閉視窗
-                if (!newWin.closed) {
-                    newWin.close();
-                    log(`✅ 已自動關閉`, "success");
-                } else {
-                    log(`⚠️ 使用者已手動關閉`, "info");
-                }
-
-                // (選用) 每個循環中間緩衝 1 秒
-                await new Promise(resolve => setTimeout(resolve, 1000));
+            // 設定日期為今天
+            const todayStr = getTodayDateString();
+            urlObj.searchParams.set('date', todayStr);
+            
+            // 取得初始 timeTableId
+            let currentId = parseInt(urlObj.searchParams.get('timeTableId'));
+            if (isNaN(currentId)) {
+                alert("找不到 timeTableId 參數，請確認網址格式");
+                return;
             }
 
-            statusText.innerText = "全部完成";
-            log("<strong>所有任務已執行完畢。</strong>", "info");
-            btnStart.disabled = false;
+            isRunning = true;
+            btnStart.disabled = true;
+            btnStop.disabled = false;
+            logArea.innerHTML = "";
+            log(`📅 設定日期為：<strong>${todayStr}</strong>`);
+            log(`🔢 起始 ID：<strong>${currentId}</strong>，預計嘗試 ${maxRetries} 次`);
+
+            // 2. 開始迴圈
+            for (let i = 0; i < maxRetries; i++) {
+                if (!isRunning) break;
+
+                // 更新 ID
+                urlObj.searchParams.set('timeTableId', currentId + i);
+                const targetUrl = urlObj.toString();
+
+                statusText.innerText = `正在測試 (${i + 1}/${maxRetries}) ID: ${currentId + i}`;
+                log(`開啟連結: <span class="highlight">ID=${currentId + i}</span>`);
+
+                // 開啟視窗
+                const newWin = window.open(targetUrl, '_blank', 'width=600,height=400');
+
+                if (!newWin) {
+                    log("❌ 視窗被攔截，請允許彈出視窗！");
+                    stopProcess();
+                    return;
+                }
+
+                // 等待設定的時間
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+
+                // 關閉視窗 (因為無法偵測成功，我們只能假設時間到了就關掉換下一個)
+                if (!newWin.closed) {
+                    newWin.close();
+                }
+
+                // 稍微休息一下避免瀏覽器當機
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            if (isRunning) {
+                log("✅ 任務完成！請檢查是否有點名成功。");
+                stopProcess();
+            }
         }
     </script>
 </body>
