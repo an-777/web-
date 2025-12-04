@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>隨機間隔 - 課程點名掃描器</title>
+    <title>小數點隨機間隔 - 自動掃描器</title>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
         input[type="text"], input[type="number"] {
@@ -30,7 +30,7 @@
 </head>
 <body>
 
-    <h2>NCU 自動點名 (隨機秒數版)</h2>
+    <h2>NCU 自動點名 (支援小數點秒數)</h2>
     
     <label>原始連結：</label>
     <input type="text" id="urlInput" value="https://ncueeclass.ncu.edu.tw/course/joinOnSite?courseId=35214&date=2025-09-25&timeTableType=2&timeTableId=12501&week=0&classTimeId=0">
@@ -41,17 +41,17 @@
             <input type="number" id="retryCount" value="20">
         </div>
         <div class="col">
-            <label>最小停留秒數：</label>
-            <input type="number" id="minSec" value="3">
+            <label>最小停留秒數 (可小數)：</label>
+            <input type="number" id="minSec" value="1.5" step="0.1">
         </div>
         <div class="col">
-            <label>最大停留秒數：</label>
-            <input type="number" id="maxSec" value="6">
+            <label>最大停留秒數 (可小數)：</label>
+            <input type="number" id="maxSec" value="3.5" step="0.1">
         </div>
     </div>
 
     <div class="controls">
-        <button id="btnStart" onclick="startProcess()">🚀 開始隨機掃描</button>
+        <button id="btnStart" onclick="startProcess()">🚀 開始掃描</button>
         <button id="btnStop" onclick="stopProcess()" disabled>⛔ 停止</button>
         <span id="statusText" style="font-weight: bold; color: #d9534f;"></span>
     </div>
@@ -74,7 +74,6 @@
             logArea.scrollTop = logArea.scrollHeight;
         }
 
-        // 取得今天的日期格式 YYYY-MM-DD
         function getTodayDateString() {
             const d = new Date();
             const year = d.getFullYear();
@@ -83,11 +82,9 @@
             return `${year}-${month}-${day}`;
         }
 
-        // 產生範圍內的隨機整數
-        function getRandomInt(min, max) {
-            min = Math.ceil(min);
-            max = Math.floor(max);
-            return Math.floor(Math.random() * (max - min + 1)) + min; 
+        // 產生範圍內的隨機浮點數
+        function getRandomFloat(min, max) {
+            return Math.random() * (max - min) + min;
         }
 
         function stopProcess() {
@@ -102,22 +99,20 @@
             const rawUrl = document.getElementById('urlInput').value.trim();
             const maxRetries = parseInt(document.getElementById('retryCount').value, 10);
             
-            // 取得秒數設定
-            const minSec = parseInt(document.getElementById('minSec').value, 10);
-            const maxSec = parseInt(document.getElementById('maxSec').value, 10);
+            // 使用 parseFloat 解析小數
+            const minSec = parseFloat(document.getElementById('minSec').value);
+            const maxSec = parseFloat(document.getElementById('maxSec').value);
 
             if (!rawUrl) { alert("請輸入網址"); return; }
+            if (isNaN(minSec) || isNaN(maxSec)) { alert("請輸入有效的秒數"); return; }
             if (minSec > maxSec) { alert("最小秒數不能大於最大秒數！"); return; }
 
-            // 解析網址
             let urlObj;
             try { urlObj = new URL(rawUrl); } catch (e) { alert("網址格式錯誤"); return; }
 
-            // 設定日期為今天
             const todayStr = getTodayDateString();
             urlObj.searchParams.set('date', todayStr);
             
-            // 取得初始 ID
             let currentId = parseInt(urlObj.searchParams.get('timeTableId'));
             if (isNaN(currentId)) { alert("網址內缺少 timeTableId"); return; }
 
@@ -128,21 +123,22 @@
             log(`📅 設定日期：${todayStr}`);
             log(`🎲 隨機間隔：${minSec} ~ ${maxSec} 秒`);
 
-            // 開始迴圈
             for (let i = 0; i < maxRetries; i++) {
                 if (!isRunning) break;
 
-                // 更新 ID
                 urlObj.searchParams.set('timeTableId', currentId + i);
                 const targetUrl = urlObj.toString();
 
-                // 計算這次的隨機秒數
-                const waitTimeSec = getRandomInt(minSec, maxSec);
+                // 計算隨機秒數 (保留小數運算)
+                const waitTimeRaw = getRandomFloat(minSec, maxSec);
+                // 為了日誌好看，取小數點後兩位顯示
+                const waitTimeDisplay = waitTimeRaw.toFixed(2);
+                // 轉成毫秒供 setTimeout 使用
+                const waitTimeMs = waitTimeRaw * 1000;
                 
                 statusText.innerText = `執行中 (${i + 1}/${maxRetries})`;
-                log(`開啟: <span class="highlight">ID=${currentId + i}</span> (停留 <span class="wait-time">${waitTimeSec}s</span>)`);
+                log(`開啟: <span class="highlight">ID=${currentId + i}</span> (停留 <span class="wait-time">${waitTimeDisplay}s</span>)`);
 
-                // 開啟視窗
                 const newWin = window.open(targetUrl, '_blank', 'width=600,height=400');
 
                 if (!newWin) {
@@ -152,11 +148,11 @@
                 }
 
                 // 等待隨機時間
-                await new Promise(resolve => setTimeout(resolve, waitTimeSec * 1000));
+                await new Promise(resolve => setTimeout(resolve, waitTimeMs));
 
                 if (!newWin.closed) newWin.close();
 
-                // 每個循環中間的小緩衝 (0.5秒)
+                // 稍微休息
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
 
