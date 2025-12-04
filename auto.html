@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>課程自動點名助手</title>
+    <title>隨機間隔 - 課程點名掃描器</title>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
         input[type="text"], input[type="number"] {
@@ -18,44 +18,44 @@
         button:hover { background-color: #218838; }
         button:disabled { background-color: #ccc; cursor: not-allowed; }
         button#btnStop { background-color: #dc3545; }
-        button#btnStop:hover { background-color: #c82333; }
         
-        .log { padding: 15px; background: #f8f9fa; border: 1px solid #ddd; height: 300px; overflow-y: auto; font-family: monospace; }
-        .item { margin-bottom: 5px; border-bottom: 1px dashed #eee; }
+        .row { display: flex; gap: 20px; margin-bottom: 10px; }
+        .col { flex: 1; }
+
+        .log { padding: 15px; background: #f8f9fa; border: 1px solid #ddd; height: 350px; overflow-y: auto; font-family: monospace; }
+        .item { margin-bottom: 5px; border-bottom: 1px dashed #eee; padding-bottom: 2px;}
         .highlight { color: #0056b3; font-weight: bold; }
-        .warn { color: #856404; background-color: #fff3cd; padding: 2px; }
+        .wait-time { color: #e67e22; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <h2>NCU 自動點名連結產生器</h2>
-    <div class="warn">
-        ⚠️ <strong>限制說明：</strong> 基於瀏覽器安全政策，本工具<b>無法偵測</b>網頁是否顯示「點名成功」。<br>
-        它會依照設定次數自動遞增 ID 並開啟連結。請自行留意結果。
-    </div>
-    <br>
-
-    <label>原始連結 (包含舊的 date 與 timeTableId)：</label>
+    <h2>NCU 自動點名 (隨機秒數版)</h2>
+    
+    <label>原始連結：</label>
     <input type="text" id="urlInput" value="https://ncueeclass.ncu.edu.tw/course/joinOnSite?courseId=35214&date=2025-09-25&timeTableType=2&timeTableId=12501&week=0&classTimeId=0">
 
-    <div style="display: flex; gap: 20px;">
-        <div style="flex: 1;">
+    <div class="row">
+        <div class="col">
             <label>嘗試次數 (掃描範圍)：</label>
             <input type="number" id="retryCount" value="20">
         </div>
-        <div style="flex: 1;">
-            <label>每個視窗停留秒數：</label>
-            <input type="number" id="waitSec" value="3">
+        <div class="col">
+            <label>最小停留秒數：</label>
+            <input type="number" id="minSec" value="3">
+        </div>
+        <div class="col">
+            <label>最大停留秒數：</label>
+            <input type="number" id="maxSec" value="6">
         </div>
     </div>
 
     <div class="controls">
-        <button id="btnStart" onclick="startProcess()">🚀 開始掃描</button>
+        <button id="btnStart" onclick="startProcess()">🚀 開始隨機掃描</button>
         <button id="btnStop" onclick="stopProcess()" disabled>⛔ 停止</button>
         <span id="statusText" style="font-weight: bold; color: #d9534f;"></span>
     </div>
 
-    <h3>執行紀錄：</h3>
     <div id="logArea" class="log">準備就緒...</div>
 
     <script>
@@ -83,6 +83,13 @@
             return `${year}-${month}-${day}`;
         }
 
+        // 產生範圍內的隨機整數
+        function getRandomInt(min, max) {
+            min = Math.ceil(min);
+            max = Math.floor(max);
+            return Math.floor(Math.random() * (max - min + 1)) + min; 
+        }
+
         function stopProcess() {
             isRunning = false;
             log("🛑 使用者已手動停止");
@@ -94,38 +101,34 @@
         async function startProcess() {
             const rawUrl = document.getElementById('urlInput').value.trim();
             const maxRetries = parseInt(document.getElementById('retryCount').value, 10);
-            const waitTime = parseInt(document.getElementById('waitSec').value, 10) * 1000;
+            
+            // 取得秒數設定
+            const minSec = parseInt(document.getElementById('minSec').value, 10);
+            const maxSec = parseInt(document.getElementById('maxSec').value, 10);
 
             if (!rawUrl) { alert("請輸入網址"); return; }
+            if (minSec > maxSec) { alert("最小秒數不能大於最大秒數！"); return; }
 
-            // 1. 解析網址並修改參數
+            // 解析網址
             let urlObj;
-            try {
-                urlObj = new URL(rawUrl);
-            } catch (e) {
-                alert("網址格式錯誤");
-                return;
-            }
+            try { urlObj = new URL(rawUrl); } catch (e) { alert("網址格式錯誤"); return; }
 
             // 設定日期為今天
             const todayStr = getTodayDateString();
             urlObj.searchParams.set('date', todayStr);
             
-            // 取得初始 timeTableId
+            // 取得初始 ID
             let currentId = parseInt(urlObj.searchParams.get('timeTableId'));
-            if (isNaN(currentId)) {
-                alert("找不到 timeTableId 參數，請確認網址格式");
-                return;
-            }
+            if (isNaN(currentId)) { alert("網址內缺少 timeTableId"); return; }
 
             isRunning = true;
             btnStart.disabled = true;
             btnStop.disabled = false;
             logArea.innerHTML = "";
-            log(`📅 設定日期為：<strong>${todayStr}</strong>`);
-            log(`🔢 起始 ID：<strong>${currentId}</strong>，預計嘗試 ${maxRetries} 次`);
+            log(`📅 設定日期：${todayStr}`);
+            log(`🎲 隨機間隔：${minSec} ~ ${maxSec} 秒`);
 
-            // 2. 開始迴圈
+            // 開始迴圈
             for (let i = 0; i < maxRetries; i++) {
                 if (!isRunning) break;
 
@@ -133,32 +136,32 @@
                 urlObj.searchParams.set('timeTableId', currentId + i);
                 const targetUrl = urlObj.toString();
 
-                statusText.innerText = `正在測試 (${i + 1}/${maxRetries}) ID: ${currentId + i}`;
-                log(`開啟連結: <span class="highlight">ID=${currentId + i}</span>`);
+                // 計算這次的隨機秒數
+                const waitTimeSec = getRandomInt(minSec, maxSec);
+                
+                statusText.innerText = `執行中 (${i + 1}/${maxRetries})`;
+                log(`開啟: <span class="highlight">ID=${currentId + i}</span> (停留 <span class="wait-time">${waitTimeSec}s</span>)`);
 
                 // 開啟視窗
                 const newWin = window.open(targetUrl, '_blank', 'width=600,height=400');
 
                 if (!newWin) {
-                    log("❌ 視窗被攔截，請允許彈出視窗！");
+                    log("❌ 視窗被攔截！請允許彈出視窗。");
                     stopProcess();
                     return;
                 }
 
-                // 等待設定的時間
-                await new Promise(resolve => setTimeout(resolve, waitTime));
+                // 等待隨機時間
+                await new Promise(resolve => setTimeout(resolve, waitTimeSec * 1000));
 
-                // 關閉視窗 (因為無法偵測成功，我們只能假設時間到了就關掉換下一個)
-                if (!newWin.closed) {
-                    newWin.close();
-                }
+                if (!newWin.closed) newWin.close();
 
-                // 稍微休息一下避免瀏覽器當機
+                // 每個循環中間的小緩衝 (0.5秒)
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
 
             if (isRunning) {
-                log("✅ 任務完成！請檢查是否有點名成功。");
+                log("✅ 任務完成！");
                 stopProcess();
             }
         }
